@@ -36,7 +36,30 @@ supprted_dataset_list = {
     "ActorAttack": ["/home/myt/DivSafe-master/datasets/ActorAttack", "", "", "", ""]
 }
 
-supported_model_list = ["chatgpt", "gpt4", "claude3", "o1-mini", "gpt-4o", "mistral-7b-instruct", "llama3-8b-instruct", "llama3.1-8b-instruct", "llama3-8b-instruct-safeprompt", "llama2-13b-chat", "llama2-7b-chat", "llama2-7b-chat_gcg", "llama2-7b-chat_fair", "qwen2-7b-instruct", "qwen1.5-14b-chat", "qwen1.5-7b-chat", "qwen1.5-7b-chat_gcg", "qwen1.5-7b-chat_fair", "chatglm3-6b", "internlm2-7b-chat", "qwen-7b-chat"]
+supported_model_list = [
+    "chatgpt",
+    "gpt4",
+    "claude3",
+    "o1-mini",
+    "gpt-4o",
+    "mistral-7b-instruct",
+    "llama3-8b-instruct",
+    "llama3.1-8b-instruct",
+    "llama3-8b-instruct-safeprompt",
+    "llama2-13b-chat",
+    "llama2-7b-chat",
+    "llama2-7b-chat_gcg",
+    "llama2-7b-chat_fair",
+    "qwen2-7b-instruct",
+    "qwen1.5-14b-chat",
+    "qwen1.5-7b-chat",
+    "qwen1.5-7b-chat_gcg",
+    "qwen1.5-7b-chat_fair",
+    "chatglm3-6b",
+    "internlm2-7b-chat",
+    "qwen-7b-chat",
+    "qwen3-8b",
+]
 #my_model_list = ["llama3-8b-instruct-SRT", "llama3-8b-instruct-SRT-2", "llama3-8b-instruct-SRT-3", "llama3-8b-instruct-SFT", "llama3-8b-instruct-SFTdivsafe", "qwen2-7b-instruct-SRT", "qwen2-7b-instruct-SRT-2", "qwen2-7b-instruct-SFT", "qwen2-7b-instruct-sftdivsafe"]
 my_model_list = ["llama3-8b-multitask_safety_v1", "llama3-8b-COT_safety_v1", "llama3-8b-COT_safety_v2"]
 
@@ -59,6 +82,8 @@ if args.attack:
         from easyjailbreak.models.glm_model import from_pretrained
     elif "qwen1.5" in args.model_name or "qwen2" in args.model_name:
         from easyjailbreak.models.qwen2_model import from_pretrained
+    else:
+        from easyjailbreak.models.new_model import from_pretrained
 
 if args.eval_by_gpt4:
     eval_model = OpenaiModel(model_name='gpt-4-turbo',
@@ -76,7 +101,7 @@ print(len(dataset))
 if args.attack:
     print("-----------Attack Mode-----------")
     print("target model:", args.model_name)
-    
+
     if args.model_name == "chatgpt":
         target_model = OpenaiModel(model_name=args.openai_model_name,
                             api_keys=args.api_key)
@@ -94,7 +119,7 @@ if args.attack:
                             api_keys=args.api_key)
     elif args.model_name in supported_model_list:
         target_model = from_pretrained(model_name_or_path=args.model_path,
-                                    model_name='llama-2')
+                                    model_name=args.model_name)
     elif args.model_name in my_model_list:
         target_model = from_pretrained(model_name_or_path=args.model_path,
                                     model_name='llama-2')
@@ -115,10 +140,10 @@ if args.eval_task == "original_query":
                     eval_by_gpt4=args.eval_by_gpt4,
                     jailbreak_datasets=dataset,
                     multi_turn = args.multi_turn)
-    
+
     save_path_template = "./outputs_results_benchmark/llm_response/{dataset_name}/{prompt_mode}/{dataset_name}-{model_name}.json"
     eval_path_template = "./outputs_results_benchmark/eval_results/{dataset_name}/{prompt_mode}/{dataset_name}-{model_name}_eval.json"
-    
+
     if args.attack:
         save_path = save_path_template.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
         print("save_path:", save_path)
@@ -144,7 +169,7 @@ elif args.eval_task == "jailbreak_attack":
 
     save_path_template = "./outputs_results_benchmark/llm_response_jailbreak/{dataset_name}/{prompt_mode}/{dataset_name}_jailbreak-{model_name}.json"
     eval_path_template = "./outputs_results_benchmark/eval_results_jailbreak/{dataset_name}/{prompt_mode}/{dataset_name}_jailbreak-{model_name}_eval.json"
-        
+
     if args.attack:
         save_path = save_path_template.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
         attacker.attack(save_path, args.prompt_mode)

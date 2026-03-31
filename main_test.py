@@ -1,4 +1,5 @@
 import argparse
+import os
 
 from easyjailbreak.attacker.Multilingual_Deng_2023 import Multilingual
 from easyjailbreak.attacker.Jailbroken_wei_2023 import Jailbroken
@@ -25,6 +26,7 @@ parser.add_argument('--multi_turn', action="store_true", default=False)
 parser.add_argument('--judge_model_path', default="/home/myt/Models/Llama-Guard-3-8B", type=str)
 parser.add_argument("--attack", action="store_true", default=False)
 parser.add_argument("--evaluation", action="store_true", default=False)
+parser.add_argument("--output_dir", default="./outputs_results_benchmark", type=str)
 
 args = parser.parse_args()
 
@@ -141,16 +143,20 @@ if args.eval_task == "original_query":
                     jailbreak_datasets=dataset,
                     multi_turn = args.multi_turn)
 
-    save_path_template = "./outputs_results_benchmark/llm_response/{dataset_name}/{prompt_mode}/{dataset_name}-{model_name}.json"
-    eval_path_template = "./outputs_results_benchmark/eval_results/{dataset_name}/{prompt_mode}/{dataset_name}-{model_name}_eval.json"
+    save_path_template = os.path.join(args.output_dir, "llm_response/{dataset_name}/{prompt_mode}/{dataset_name}-{model_name}.json")
+    eval_path_template = os.path.join(args.output_dir, "eval_results/{dataset_name}/{prompt_mode}/{dataset_name}-{model_name}_eval.json")
 
     if args.attack:
         save_path = save_path_template.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
         print("save_path:", save_path)
+        if not os.path.exists(os.path.dirname(save_path)):
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
         attacker.attack(save_path, args.prompt_mode)
     elif args.evaluation:
         save_path = save_path_template.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
         eval_path = eval_path_template.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
+        if not os.path.exists(os.path.dirname(eval_path)):
+            os.makedirs(os.path.dirname(eval_path), exist_ok=True)
         attacker.evaluation(input_path = save_path, eval_output_path = eval_path)
 
 elif args.eval_task == "jailbreak_attack":
@@ -167,15 +173,19 @@ elif args.eval_task == "jailbreak_attack":
     #                 eval_by_gpt4=args.eval_by_gpt4,
     #                 jailbreak_datasets=dataset)
 
-    save_path_template = "./outputs_results_benchmark/llm_response_jailbreak/{dataset_name}/{prompt_mode}/{dataset_name}_jailbreak-{model_name}.json"
-    eval_path_template = "./outputs_results_benchmark/eval_results_jailbreak/{dataset_name}/{prompt_mode}/{dataset_name}_jailbreak-{model_name}_eval.json"
+    save_path_template = os.path.join(args.output_dir, "llm_response_jailbreak/{dataset_name}/{prompt_mode}/{dataset_name}_jailbreak-{model_name}.json")
+    eval_path_template = os.path.join(args.output_dir, "eval_results_jailbreak/{dataset_name}/{prompt_mode}/{dataset_name}_jailbreak-{model_name}_eval.json")
 
     if args.attack:
         save_path = save_path_template.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
+        if not os.path.exists(os.path.dirname(save_path)):
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
         attacker.attack(save_path, args.prompt_mode)
     elif args.evaluation:
         save_path = save_path_template.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
         eval_path = eval_path_template.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
+        if not os.path.exists(os.path.dirname(eval_path)):
+            os.makedirs(os.path.dirname(eval_path), exist_ok=True)
         print(save_path)
         print(eval_path)
         ASR = attacker.evaluation(input_path = save_path, eval_output_path = eval_path)
@@ -183,16 +193,22 @@ elif args.eval_task == "jailbreak_attack":
         print("jailbreak attack success rate:", str(ASR))
 
 elif args.eval_task == "multiple_choice":
-    save_path_template = "./outputs_results_benchmark/llm_response_mcq/{dataset_name}/{prompt_mode}/{dataset_name}_MCQ-{model_name}.json"
-    eval_path_template_1 = "./outputs_results_benchmark/eval_results_mcq/{dataset_name}/{prompt_mode}/{dataset_name}_MCQ-{model_name}_eval.json"
-    eval_path_template_2 = "./outputs_results_benchmark/eval_results_mcq/{dataset_name}/{prompt_mode}/{dataset_name}_MCQ-{model_name}_eval-2.json"
+    save_path_template = os.path.join(args.output_dir, "llm_response_mcq/{dataset_name}/{prompt_mode}/{dataset_name}_MCQ-{model_name}.json")
+    eval_path_template_1 = os.path.join(args.output_dir, "eval_results_mcq/{dataset_name}/{prompt_mode}/{dataset_name}_MCQ-{model_name}_eval.json")
+    eval_path_template_2 = os.path.join(args.output_dir, "eval_results_mcq/{dataset_name}/{prompt_mode}/{dataset_name}_MCQ-{model_name}_eval-2.json")
     if args.attack:
         save_path = save_path_template.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
+        if not os.path.exists(os.path.dirname(save_path)):
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
         MultipleChioceQuestion(target_model=target_model, test_file=supprted_dataset_list[args.dataset_name][2], save_path=save_path, prompt_mode=args.prompt_mode)
     elif args.evaluation:
         save_path = save_path_template.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
         eval_path_1 = eval_path_template_1.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
         eval_path_2 = eval_path_template_2.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
+        if not os.path.exists(os.path.dirname(eval_path_1)):
+            os.makedirs(os.path.dirname(eval_path_1), exist_ok=True)
+        if not os.path.exists(os.path.dirname(eval_path_2)):
+            os.makedirs(os.path.dirname(eval_path_2), exist_ok=True)
         false_rate_non_format_1, false_rate_format_1, false_format_nums_1, error_format_nums_1 = MultipleChioceQuestion_evaluation(eval_model=eval_model, results_file=save_path, save_path=eval_path_1)
         false_rate_non_format, false_rate_format, false_format_nums, error_format_nums = MultipleChioceQuestion_evaluation(eval_model=eval_model, results_file=save_path, save_path=eval_path_2, format_mode=False)
         # print("false_rate_non_format / false_rate_format / false_format_nums / error_format_nums")
@@ -208,11 +224,17 @@ elif args.eval_task == "safety_judgement":
     eval_path_template_2 = "./outputs_results_benchmark/eval_results_selfeval/{dataset_name}/{prompt_mode}/{dataset_name}_SelfEval-{model_name}_eval-2.json"
     if args.attack:
         save_path = save_path_template.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
+        if not os.path.exists(os.path.dirname(save_path)):
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
         selfevalcheck(target_model=target_model, test_file=supprted_dataset_list[args.dataset_name][3], save_path=save_path, prompt_mode=args.prompt_mode)
     elif args.evaluation:
         save_path = save_path_template.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
         eval_path_1 = eval_path_template_1.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
         eval_path_2 = eval_path_template_2.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
+        if not os.path.exists(os.path.dirname(eval_path_1)):
+            os.makedirs(os.path.dirname(eval_path_1), exist_ok=True)
+        if not os.path.exists(os.path.dirname(eval_path_2)):
+            os.makedirs(os.path.dirname(eval_path_2), exist_ok=True)
         false_rate_non_format_1, false_rate_format_1, false_format_nums_1, error_format_nums_1 = selfevalcheck_evaluation(eval_model=eval_model, results_file=save_path, save_path=eval_path_1, Ts=supprted_dataset_list[args.dataset_name][4])
         false_rate_non_format, false_rate_format, false_format_nums, error_format_nums = selfevalcheck_evaluation(eval_model=eval_model, results_file=save_path, save_path=eval_path_2, Ts=supprted_dataset_list[args.dataset_name][4], format_mode=False)
         # print("false_rate_non_format / false_rate_format / false_format_nums / error_format_nums")

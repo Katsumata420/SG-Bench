@@ -4,7 +4,7 @@ It includes the HuggingfaceModel class that extends the functionality of the Whi
 """
 
 from .model_base import WhiteBoxModelBase
-from transformers import AutoModelForCausalLM, AutoTokenizer, MistralCommonTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, MistralCommonBackend
 from transformers import BitsAndBytesConfig
 import torch
 from typing import Optional, Dict, List, Any
@@ -258,7 +258,7 @@ def from_pretrained(
     if tokenizer_name_or_path is None:
         tokenizer_name_or_path = model_name_or_path
     if "mistralai" in tokenizer_name_or_path:
-        tokenizer = MistralCommonTokenizer.from_pretrained(tokenizer_name_or_path)
+        tokenizer = MistralCommonBackend.from_pretrained(tokenizer_name_or_path)
     else:
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path, trust_remote_code=True)
 

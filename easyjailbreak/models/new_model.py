@@ -4,7 +4,7 @@ It includes the HuggingfaceModel class that extends the functionality of the Whi
 """
 
 from .model_base import WhiteBoxModelBase
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, MistralCommonTokenizer
 from transformers import BitsAndBytesConfig
 import torch
 from typing import Optional, Dict, List, Any
@@ -59,15 +59,21 @@ class NewModel(WhiteBoxModelBase):
                 {"role": "user", "content": messages[0]}
             ]
 
-            input_ids = self.tokenizer.apply_chat_template(
-                messages,
-                add_generation_prompt=True,
-                return_tensors="pt"
-            ).to(self.model.device)
+            if "mistral" in self.model_name.lower():
+                input_ids = self.tokenizer.apply_chat_template(
+                    messages,
+                    return_tensors="pt",
+                ).to(self.model.device)
+            else:
+                input_ids = self.tokenizer.apply_chat_template(
+                    messages,
+                    add_generation_prompt=True,
+                    return_tensors="pt",
+                    enable_thinking=False,
+                ).to(self.model.device)
 
             terminators = [
                 self.tokenizer.eos_token_id,
-                self.tokenizer.convert_tokens_to_ids("<|eot_id|>")
             ]
 
         else:
@@ -78,28 +84,34 @@ class NewModel(WhiteBoxModelBase):
                 else:
                     conversation_messages.append({"role": "system", "content": message})
 
-            input_ids = self.tokenizer.apply_chat_template(
-                conversation_messages,
-                add_generation_prompt=True,
-                return_tensors="pt"
-            ).to(self.model.device)
+            if "mistral" in self.model_name.lower():
+                input_ids = self.tokenizer.apply_chat_template(
+                    conversation_messages,
+                    return_tensors="pt",
+                ).to(self.model.device)
+            else:
+                input_ids = self.tokenizer.apply_chat_template(
+                    conversation_messages,
+                    add_generation_prompt=True,
+                    return_tensors="pt",
+                    enable_thinking=False,
+                ).to(self.model.device)
 
             terminators = [
                 self.tokenizer.eos_token_id,
-                self.tokenizer.convert_tokens_to_ids("<|eot_id|>")
             ]
 
 
         outputs = self.model.generate(
-            input_ids,
+            **input_ids,
             max_new_tokens=256,
             eos_token_id=terminators,
             do_sample=True,
             temperature=0.6,
             top_p=0.9,
         )
-        response = self.tokenizer.decode(outputs[0][input_ids.shape[-1]:], skip_special_tokens=True)
-        print(response)
+        response = self.tokenizer.decode(outputs[0][input_ids["input_ids"].shape[-1]:], skip_special_tokens=True)
+        print(f"model response: {response}")
 
         return response
 
@@ -186,8 +198,14 @@ class NewModel(WhiteBoxModelBase):
         return self.embed_layer.weight.size(0)
 
 
-def from_pretrained(model_name_or_path: str, model_name: str, tokenizer_name_or_path: Optional[str] = None,
-                    dtype: Optional[torch.dtype] = None, **generation_config: Dict[str, Any]) -> NewModel:
+def from_pretrained(
+    model_name_or_path: str,
+    model_name: str,
+    tokenizer_name_or_path: Optional[str] = None,
+    dtype: Optional[torch.dtype] = None,
+    use_nf4: bool = False,
+    **generation_config: Dict[str, Any],
+) -> NewModel:
     """
     Imports a Hugging Face model and tokenizer with a single function call.
 
@@ -216,17 +234,33 @@ def from_pretrained(model_name_or_path: str, model_name: str, tokenizer_name_or_
     if dtype is None:
         dtype = 'auto'
 
-    nf4_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_compute_dtype=torch.bfloat16
+    if use_nf4:
+        nf4_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_use_double_quant=True,
+            bnb_4bit_compute_dtype=torch.bfloat16,
         )
+        attn_implementation = "eager"
+    else:
+        nf4_config = None
+        attn_implementation = "sdpa"
 
-    model = AutoModelForCausalLM.from_pretrained(model_name_or_path, device_map='auto', trust_remote_code=True, low_cpu_mem_usage=True, torch_dtype=dtype, quantization_config=nf4_config).eval()
+    model = AutoModelForCausalLM.from_pretrained(
+        model_name_or_path,
+        device_map='auto',
+        trust_remote_code=True,
+        low_cpu_mem_usage=True,
+        torch_dtype=dtype,
+        quantization_config=nf4_config,
+        attn_implementation=attn_implementation,
+    ).eval()
     if tokenizer_name_or_path is None:
         tokenizer_name_or_path = model_name_or_path
-    tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path, trust_remote_code=True)
+    if "mistralai" in tokenizer_name_or_path:
+        tokenizer = MistralCommonTokenizer.from_pretrained(tokenizer_name_or_path)
+    else:
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path, trust_remote_code=True)
 
     if tokenizer.padding_side is None:
         tokenizer.padding_side = 'right'

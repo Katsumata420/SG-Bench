@@ -3,10 +3,8 @@ import os
 
 from easyjailbreak.attacker.Multilingual_Deng_2023 import Multilingual
 from easyjailbreak.attacker.Jailbroken_wei_2023 import Jailbroken
-from easyjailbreak.attacker.AutoDAN_Liu_2023 import AutoDAN
 from easyjailbreak.attacker.MCQ import MultipleChioceQuestion, MultipleChioceQuestion_evaluation
-#from easyjailbreak.attacker.MCQ_v2 import MultipleChioceQuestion, MultipleChioceQuestion_evaluation
-from easyjailbreak.attacker.SelfEval import selfevalcheck, selfevalcheck_evaluation, claude3_check_dataset
+from easyjailbreak.attacker.SelfEval import selfevalcheck, selfevalcheck_evaluation
 from easyjailbreak.datasets import JailbreakDataset
 from easyjailbreak.models.openai_model import OpenaiModel
 from easyjailbreak.models.huggingface_model import from_pretrained
@@ -30,7 +28,7 @@ parser.add_argument("--output_dir", default="./outputs_results_benchmark", type=
 
 args = parser.parse_args()
 
-supprted_dataset_list = {
+supported_dataset_list = {
     "AdvBench520": ["/home/myt/Datasets/Eval_benchmark/AdvBench", "/home/myt/Datasets/Eval_benchmark/AdvBench-MCQ/AdvBench-mcq-test.json", "/home/myt/Datasets/Eval_benchmark/AdvBench-SelfEval/AdvBench-SelfEval-test.json", 520],
     "SG-Bench": ["/home/myt/DivSafe-master/datasets/SG-Bench/original_query", "/home/myt/DivSafe-master/datasets/SG-Bench/original_query", "/home/myt/DivSafe-master/datasets/SG-Bench/mcq_test/mcq_test.json", "/home/myt/DivSafe-master/datasets/SG-Bench/judge_test/judge_test.json", 1442],
     "SaladBench": ["/home/myt/DivSafe-master/datasets/SaladBench/base_set", "/home/myt/DivSafe-master/datasets/SaladBench/attack_enhanced_set", "", "", ""],
@@ -62,16 +60,7 @@ supported_model_list = [
     "qwen-7b-chat",
     "qwen3-8b",
 ]
-#my_model_list = ["llama3-8b-instruct-SRT", "llama3-8b-instruct-SRT-2", "llama3-8b-instruct-SRT-3", "llama3-8b-instruct-SFT", "llama3-8b-instruct-SFTdivsafe", "qwen2-7b-instruct-SRT", "qwen2-7b-instruct-SRT-2", "qwen2-7b-instruct-SFT", "qwen2-7b-instruct-sftdivsafe"]
 my_model_list = ["llama3-8b-multitask_safety_v1", "llama3-8b-COT_safety_v1", "llama3-8b-COT_safety_v2"]
-
-# model_name = "llama2-7b-chat"
-# eval_by_gpt4 = True
-# dataset_name = "DivSafe"
-# eval_set = "Non-adv" # Non-adv, JB, MCQ, TFQ
-# MODE = "attack" # attack, evaluation
-# prompt_mode = ""
-# scene_mode = "single"
 
 if args.attack:
     if "mistral" in args.model_name or "llama2" in args.model_name:
@@ -88,17 +77,15 @@ if args.attack:
         from easyjailbreak.models.new_model import from_pretrained
 
 if args.eval_by_gpt4:
-    eval_model = OpenaiModel(model_name='gpt-4-turbo',
-                         api_keys=args.api_key)
+    eval_model = OpenaiModel(model_name='gpt-4-turbo', api_keys=args.api_key)
 else:
-    eval_model = from_pretrained(model_name_or_path=args.judge_model_path,
-                                   model_name='llama-2')
+    eval_model = from_pretrained(model_name_or_path=args.judge_model_path, model_name='llama-2')
 
 if args.eval_task == "original_query":
-    dataset = JailbreakDataset(supprted_dataset_list[args.dataset_name][0])
+    dataset = JailbreakDataset(supported_dataset_list[args.dataset_name][0])
 elif args.eval_task == "jailbreak_attack":
-    dataset = JailbreakDataset(supprted_dataset_list[args.dataset_name][1])
-print(len(dataset))
+    dataset = JailbreakDataset(supported_dataset_list[args.dataset_name][1])
+print(f"# of samples in the dataset: {len(dataset)}")
 
 if args.attack:
     print("-----------Attack Mode-----------")
@@ -126,14 +113,12 @@ if args.attack:
         target_model = from_pretrained(model_name_or_path=args.model_path,
                                     model_name='llama-2')
     else:
-        print("model does not implement yet.....")
-        exit()
+        raise NotImplementedError("The model is not supported yet, please check the model name and try again.")
 elif args.evaluation:
     print("-----------Evaluation Mode-----------")
     target_model = eval_model
 else:
-    print("The mode is not supported ....")
-    exit()
+    raise NotImplementedError("The mode is not supported yet, please check the mode and try again.")
 
 if args.eval_task == "original_query":
     attacker = Multilingual(attack_model=target_model,
@@ -167,12 +152,6 @@ elif args.eval_task == "jailbreak_attack":
                     eval_by_gpt4=args.eval_by_gpt4,
                     jailbreak_datasets=dataset)
 
-    # attacker = AutoDAN(attack_model=target_model,
-    #                 target_model=target_model,
-    #                 eval_model=eval_model,
-    #                 eval_by_gpt4=args.eval_by_gpt4,
-    #                 jailbreak_datasets=dataset)
-
     save_path_template = os.path.join(args.output_dir, "llm_response_jailbreak/{dataset_name}/{prompt_mode}/{dataset_name}_jailbreak-{model_name}.json")
     eval_path_template = os.path.join(args.output_dir, "eval_results_jailbreak/{dataset_name}/{prompt_mode}/{dataset_name}_jailbreak-{model_name}_eval.json")
 
@@ -186,10 +165,11 @@ elif args.eval_task == "jailbreak_attack":
         eval_path = eval_path_template.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
         if not os.path.exists(os.path.dirname(eval_path)):
             os.makedirs(os.path.dirname(eval_path), exist_ok=True)
-        print(save_path)
-        print(eval_path)
+        print("save_path:", save_path)
+        print("eval_path:", eval_path)
         ASR = attacker.evaluation(input_path = save_path, eval_output_path = eval_path)
-        print(args.dataset_name+"/"+args.model_name+"/"+args.eval_task)
+        print("-----------Evaluation Result-----------")
+        print(os.path.join(args.dataset_name, args.model_name, args.eval_task))
         print("jailbreak attack success rate:", str(ASR))
 
 elif args.eval_task == "multiple_choice":
@@ -200,7 +180,7 @@ elif args.eval_task == "multiple_choice":
         save_path = save_path_template.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
         if not os.path.exists(os.path.dirname(save_path)):
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        MultipleChioceQuestion(target_model=target_model, test_file=supprted_dataset_list[args.dataset_name][2], save_path=save_path, prompt_mode=args.prompt_mode)
+        MultipleChioceQuestion(target_model=target_model, test_file=supported_dataset_list[args.dataset_name][2], save_path=save_path, prompt_mode=args.prompt_mode)
     elif args.evaluation:
         save_path = save_path_template.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
         eval_path_1 = eval_path_template_1.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
@@ -211,10 +191,6 @@ elif args.eval_task == "multiple_choice":
             os.makedirs(os.path.dirname(eval_path_2), exist_ok=True)
         false_rate_non_format_1, false_rate_format_1, false_format_nums_1, error_format_nums_1 = MultipleChioceQuestion_evaluation(eval_model=eval_model, results_file=save_path, save_path=eval_path_1)
         false_rate_non_format, false_rate_format, false_format_nums, error_format_nums = MultipleChioceQuestion_evaluation(eval_model=eval_model, results_file=save_path, save_path=eval_path_2, format_mode=False)
-        # print("false_rate_non_format / false_rate_format / false_format_nums / error_format_nums")
-        # print(false_rate_non_format_1, false_rate_format_1, false_format_nums_1, error_format_nums_1)
-        # print("--------------------------------------")
-        #print("false_rate_non_format / false_rate_format / false_format_nums / error_format_nums")
         print("multiple-choice question test -- false rate:", false_rate_non_format)
 
 
@@ -226,7 +202,7 @@ elif args.eval_task == "safety_judgement":
         save_path = save_path_template.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
         if not os.path.exists(os.path.dirname(save_path)):
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        selfevalcheck(target_model=target_model, test_file=supprted_dataset_list[args.dataset_name][3], save_path=save_path, prompt_mode=args.prompt_mode)
+        selfevalcheck(target_model=target_model, test_file=supported_dataset_list[args.dataset_name][3], save_path=save_path, prompt_mode=args.prompt_mode)
     elif args.evaluation:
         save_path = save_path_template.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
         eval_path_1 = eval_path_template_1.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
@@ -235,15 +211,6 @@ elif args.eval_task == "safety_judgement":
             os.makedirs(os.path.dirname(eval_path_1), exist_ok=True)
         if not os.path.exists(os.path.dirname(eval_path_2)):
             os.makedirs(os.path.dirname(eval_path_2), exist_ok=True)
-        false_rate_non_format_1, false_rate_format_1, false_format_nums_1, error_format_nums_1 = selfevalcheck_evaluation(eval_model=eval_model, results_file=save_path, save_path=eval_path_1, Ts=supprted_dataset_list[args.dataset_name][4])
-        false_rate_non_format, false_rate_format, false_format_nums, error_format_nums = selfevalcheck_evaluation(eval_model=eval_model, results_file=save_path, save_path=eval_path_2, Ts=supprted_dataset_list[args.dataset_name][4], format_mode=False)
-        # print("false_rate_non_format / false_rate_format / false_format_nums / error_format_nums")
-        # print(false_rate_non_format_1, false_rate_format_1, false_format_nums_1, error_format_nums_1)
-        # print("--------------------------------------")
-        #print("false_rate_non_format / false_rate_format / false_format_nums / error_format_nums")
+        false_rate_non_format_1, false_rate_format_1, false_format_nums_1, error_format_nums_1 = selfevalcheck_evaluation(eval_model=eval_model, results_file=save_path, save_path=eval_path_1, Ts=supported_dataset_list[args.dataset_name][4])
+        false_rate_non_format, false_rate_format, false_format_nums, error_format_nums = selfevalcheck_evaluation(eval_model=eval_model, results_file=save_path, save_path=eval_path_2, Ts=supported_dataset_list[args.dataset_name][4], format_mode=False)
         print("safety judgment test -- false rate:", false_rate_non_format)
-    # elif MODE == "check":
-    #     save_path = save_path_template.format(dataset_name=dataset_name, model_name=model_name)
-    #     eval_path_1 = eval_path_template_1.format(dataset_name=dataset_name, model_name=model_name)
-    #     eval_path_2 = eval_path_template_2.format(dataset_name=dataset_name, model_name=model_name)
-    #     false_rate_non_format, false_rate_format, false_format_nums, error_format_nums = claude3_check_dataset(eval_model=eval_model, results_file=save_path, save_path=eval_path_2, Ts=dataset_list[dataset_name][3], format_mode=False)

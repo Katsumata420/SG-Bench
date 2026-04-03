@@ -59,6 +59,8 @@ supported_model_list = [
     "internlm2-7b-chat",
     "qwen-7b-chat",
     "qwen3-8b",
+    "olmo3-8b",
+    "mistral3-8b",
 ]
 my_model_list = ["llama3-8b-multitask_safety_v1", "llama3-8b-COT_safety_v1", "llama3-8b-COT_safety_v2"]
 
@@ -76,10 +78,13 @@ if args.attack:
     else:
         from easyjailbreak.models.new_model import from_pretrained
 
-if args.eval_by_gpt4:
-    eval_model = OpenaiModel(model_name='gpt-4-turbo', api_keys=args.api_key)
+if args.evaluation:
+    if args.eval_by_gpt4:
+        eval_model = OpenaiModel(model_name='gpt-4-turbo', api_keys=args.api_key)
+    else:
+        eval_model = from_pretrained(model_name_or_path=args.judge_model_path, model_name='llama-2')
 else:
-    eval_model = from_pretrained(model_name_or_path=args.judge_model_path, model_name='llama-2')
+    eval_model = None
 
 if args.eval_task == "original_query":
     dataset = JailbreakDataset(supported_dataset_list[args.dataset_name][0])

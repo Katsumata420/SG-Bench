@@ -88,9 +88,10 @@ else:
 
 if args.eval_task == "original_query":
     dataset = JailbreakDataset(supported_dataset_list[args.dataset_name][0])
+    print(f"# of samples in the dataset: {len(dataset)}")
 elif args.eval_task == "jailbreak_attack":
     dataset = JailbreakDataset(supported_dataset_list[args.dataset_name][1])
-print(f"# of samples in the dataset: {len(dataset)}")
+    print(f"# of samples in the dataset: {len(dataset)}")
 
 if args.attack:
     print("-----------Attack Mode-----------")

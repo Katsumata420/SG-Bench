@@ -28,9 +28,10 @@ parser.add_argument("--output_dir", default="./outputs_results_benchmark", type=
 
 args = parser.parse_args()
 
+current_dir = "/home/katsumata/work/llm-safety-eval/safety/SG-Bench"
 supported_dataset_list = {
     "AdvBench520": ["/home/myt/Datasets/Eval_benchmark/AdvBench", "/home/myt/Datasets/Eval_benchmark/AdvBench-MCQ/AdvBench-mcq-test.json", "/home/myt/Datasets/Eval_benchmark/AdvBench-SelfEval/AdvBench-SelfEval-test.json", 520],
-    "SG-Bench": ["/home/myt/DivSafe-master/datasets/SG-Bench/original_query", "/home/myt/DivSafe-master/datasets/SG-Bench/original_query", "/home/myt/DivSafe-master/datasets/SG-Bench/mcq_test/mcq_test.json", "/home/myt/DivSafe-master/datasets/SG-Bench/judge_test/judge_test.json", 1442],
+    "SG-Bench": [os.path.join(current_dir, "datasets/SG-Bench/original_query"), os.path.join(current_dir, "datasets/SG-Bench/original_query"), os.path.join(current_dir, "datasets/SG-Bench/mcq_test/mcq_test.json"), os.path.join(current_dir, "datasets/SG-Bench/judge_test/judge_test.json"), 1442],
     "SaladBench": ["/home/myt/DivSafe-master/datasets/SaladBench/base_set", "/home/myt/DivSafe-master/datasets/SaladBench/attack_enhanced_set", "", "", ""],
     "ALERT": ["/home/myt/DivSafe-master/datasets/ALERT/alert_raw", "/home/myt/DivSafe-master/datasets/ALERT/alert_adv", "", "", ""],
     "ActorAttack": ["/home/myt/DivSafe-master/datasets/ActorAttack", "", "", "", ""]

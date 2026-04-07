@@ -4,7 +4,7 @@ It includes the HuggingfaceModel class that extends the functionality of the Whi
 """
 
 from .model_base import WhiteBoxModelBase
-from transformers import AutoModelForCausalLM, AutoTokenizer, MistralCommonBackend
+from transformers import AutoModelForCausalLM, AutoTokenizer, MistralCommonBackend, Mistral3ForConditionalGeneration
 from transformers import BitsAndBytesConfig
 import torch
 from typing import Optional, Dict, List, Any
@@ -246,15 +246,26 @@ def from_pretrained(
         nf4_config = None
         attn_implementation = "sdpa"
 
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name_or_path,
-        device_map='auto',
-        trust_remote_code=True,
-        low_cpu_mem_usage=True,
-        torch_dtype=dtype,
-        quantization_config=nf4_config,
-        attn_implementation=attn_implementation,
-    ).eval()
+    if "mistral" in model_name_or_path:
+        model = Mistral3ForConditionalGeneration.from_pretrained(
+            model_name_or_path,
+            device_map='auto',
+            trust_remote_code=True,
+            low_cpu_mem_usage=True,
+            torch_dtype=dtype,
+            quantization_config=nf4_config,
+            attn_implementation=attn_implementation,
+        ).eval()
+    else:
+        model = AutoModelForCausalLM.from_pretrained(
+            model_name_or_path,
+            device_map='auto',
+            trust_remote_code=True,
+            low_cpu_mem_usage=True,
+            torch_dtype=dtype,
+            quantization_config=nf4_config,
+            attn_implementation=attn_implementation,
+        ).eval()
     if tokenizer_name_or_path is None:
         tokenizer_name_or_path = model_name_or_path
     if "mistralai" in tokenizer_name_or_path:

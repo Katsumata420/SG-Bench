@@ -19,7 +19,10 @@ from easyjailbreak.metrics.Evaluator import EvaluatorJudge
 from easyjailbreak.attacker import AttackerBase
 from easyjailbreak.datasets import JailbreakDataset, Instance
 from easyjailbreak.mutation.rule import *
+from easyjailbreak.loggers.logger import get_logger
 from collections import defaultdict
+
+logger = get_logger(__name__)
 
 __all__ = ['Multilingual']
 class Multilingual(AttackerBase):
@@ -60,8 +63,8 @@ class Multilingual(AttackerBase):
             for item in transformed_dataset:
                 mutated_instance_list.append(item)
 
-        print(len(mutated_instance_list))
-        print("****************")
+        logger.info(f"Number of mutated instances: {len(mutated_instance_list)}")
+        logger.info("****************")
 
         for instance in mutated_instance_list:
             if instance.jailbreak_prompt is not None:
@@ -76,7 +79,7 @@ class Multilingual(AttackerBase):
                             messages.append(answer)
                             answer_list.append(answer)
                     else:
-                        print("instance.query:", instance.query)
+                        logger.info(f"instance.query: {instance.query}")
                         answer = self.target_model.generate(instance.query)
                 else:
                     raise NotImplementedError("The mode is not supported yet, please check the mode and try again.")
@@ -85,9 +88,7 @@ class Multilingual(AttackerBase):
             else:
                 en_answer = answer
             instance.target_responses.append(en_answer)
-            print(instance)
             self.write_to_json(data=instance.to_dict(), filename=output_path)
-            print("****************")
             updated_instance_list.append(instance)
 
         return JailbreakDataset(updated_instance_list)
@@ -102,21 +103,19 @@ class Multilingual(AttackerBase):
 
         for mutation in self.mutations:
             transformed_dataset = mutation(instance_dataset)
-            print(len(transformed_dataset))
+            logger.info(f"Number of transformed instances: {len(transformed_dataset)}")
             for item in transformed_dataset:
                 mutated_instance_list.append(item)
 
-        print(len(mutated_instance_list))
-        print("****************")
+        logger.info(f"Number of mutated instances: {len(mutated_instance_list)}")
+        logger.info("****************")
 
         for instance in mutated_instance_list:
-            print(instance.translated_query + "\n\n" + instance.reference_responses[0] + " Because")
             answer1, answer2, answer3 = self.target_model.completion(instance.translated_query + "\n\n" + instance.reference_responses[0] + " Because")
             instance.target_responses.append(answer1)
             instance.target_responses.append(answer2)
             instance.target_responses.append(answer3)
             self.write_to_json(data=instance.to_dict())
-            print("****************")
             updated_instance_list.append(instance)
 
         return JailbreakDataset(updated_instance_list)
@@ -131,7 +130,6 @@ class Multilingual(AttackerBase):
         instance["target_responses"].append(answer2)
         instance["target_responses"].append(answer3)
         self.write_to_json(data=instance)
-        print("****************")
         updated_instance_list.append(instance)
         return JailbreakDataset(updated_instance_list)
 
@@ -156,7 +154,7 @@ class Multilingual(AttackerBase):
         logging.info("Jailbreak started!")
         self.attack_results = JailbreakDataset([])
         self.attack_results_list = []
-        print("Total queries to attack:", len(self.jailbreak_datasets))
+        logger.info(f"Total queries to attack: {len(self.jailbreak_datasets)}")
 
         i=0
         try:
@@ -164,9 +162,7 @@ class Multilingual(AttackerBase):
                 if i < 0:
                     i+=1
                     continue
-                print("---------------------------")
                 Instance['lang'] = "English"
-                print(Instance)
                 results = self.single_attack(output_path, mode, Instance)
                 for new_instance in results:
                     self.attack_results.add(new_instance)
@@ -182,7 +178,7 @@ class Multilingual(AttackerBase):
         logging.info("load LLM outputs and start to evaluate!")
         self.attack_results = JailbreakDataset([])
         results = self.read_json_tolist(filename=input_path)
-        print("Total queries to evaluate:", len(results))
+        logger.info(f"Total queries to evaluate: {len(results)}")
         i=0
         for new_instance in results:
             if i < 0:
@@ -190,7 +186,7 @@ class Multilingual(AttackerBase):
                 continue
             new_instance['lang'] = "English"
             self.attack_results.add(new_instance)
-        print("Total queries to evaluate after loading:", len(self.attack_results))
+        logger.info(f"Total queries to evaluate after loading: {len(self.attack_results)}")
         self.evaluator.eval_result_path = eval_output_path
         self.evaluator(self.attack_results)
         self.update(self.attack_results)

@@ -8,6 +8,10 @@ from easyjailbreak.attacker.SelfEval import selfevalcheck, selfevalcheck_evaluat
 from easyjailbreak.datasets import JailbreakDataset
 from easyjailbreak.models.openai_model import OpenaiModel
 from easyjailbreak.models.huggingface_model import from_pretrained
+from easyjailbreak.loggers.logger import get_logger
+
+
+logger = get_logger(__name__)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model_name', default="llama2-7b-chat", type=str, required=True)
@@ -89,14 +93,14 @@ else:
 
 if args.eval_task == "original_query":
     dataset = JailbreakDataset(supported_dataset_list[args.dataset_name][0])
-    print(f"# of samples in the dataset: {len(dataset)}")
+    logger.info(f"# of samples in the dataset: {len(dataset)}")
 elif args.eval_task == "jailbreak_attack":
     dataset = JailbreakDataset(supported_dataset_list[args.dataset_name][1])
-    print(f"# of samples in the dataset: {len(dataset)}")
+    logger.info(f"# of samples in the dataset: {len(dataset)}")
 
 if args.attack:
-    print("-----------Attack Mode-----------")
-    print("target model:", args.model_name)
+    logger.info("-----------Attack Mode-----------")
+    logger.info(f"target model: {args.model_name}")
 
     if args.model_name == "chatgpt":
         target_model = OpenaiModel(model_name=args.openai_model_name,
@@ -122,12 +126,13 @@ if args.attack:
     else:
         raise NotImplementedError("The model is not supported yet, please check the model name and try again.")
 elif args.evaluation:
-    print("-----------Evaluation Mode-----------")
+    logger.info("-----------Evaluation Mode-----------")
     target_model = eval_model
 else:
     raise NotImplementedError("The mode is not supported yet, please check the mode and try again.")
 
 if args.eval_task == "original_query":
+    logger.info(f"current task: {args.eval_task}")
     attacker = Multilingual(attack_model=target_model,
                     target_model=target_model,
                     eval_model=eval_model,
@@ -140,18 +145,27 @@ if args.eval_task == "original_query":
 
     if args.attack:
         save_path = save_path_template.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
-        print("save_path:", save_path)
+        logger.info(f"save_path: {save_path}")
         if not os.path.exists(os.path.dirname(save_path)):
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        attacker.attack(save_path, args.prompt_mode)
+        logger.info("start attacking...")
+        if os.path.exists(save_path):
+            logger.info(f"{save_path} already exists, skip attacking and start evaluating...")
+        else:
+            attacker.attack(save_path, args.prompt_mode)
     elif args.evaluation:
         save_path = save_path_template.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
         eval_path = eval_path_template.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
         if not os.path.exists(os.path.dirname(eval_path)):
             os.makedirs(os.path.dirname(eval_path), exist_ok=True)
-        attacker.evaluation(input_path = save_path, eval_output_path = eval_path)
+        logger.info("start evaluating...")
+        if os.path.exists(eval_path):
+            logger.info(f"{eval_path} already exists, skip evaluating...")
+        else:
+            attacker.evaluation(input_path = save_path, eval_output_path = eval_path)
 
 elif args.eval_task == "jailbreak_attack":
+    logger.info(f"current task: {args.eval_task}")
 # Then instantiate the recipe.
     attacker = Jailbroken(attack_model=target_model,
                     target_model=target_model,
@@ -166,20 +180,28 @@ elif args.eval_task == "jailbreak_attack":
         save_path = save_path_template.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
         if not os.path.exists(os.path.dirname(save_path)):
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        attacker.attack(save_path, args.prompt_mode)
+        if os.path.exists(save_path):
+            logger.info(f"{save_path} already exists, skip attacking and start evaluating...")
+        else:
+            attacker.attack(save_path, args.prompt_mode)
     elif args.evaluation:
         save_path = save_path_template.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
         eval_path = eval_path_template.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
         if not os.path.exists(os.path.dirname(eval_path)):
             os.makedirs(os.path.dirname(eval_path), exist_ok=True)
-        print("save_path:", save_path)
-        print("eval_path:", eval_path)
-        ASR = attacker.evaluation(input_path = save_path, eval_output_path = eval_path)
-        print("-----------Evaluation Result-----------")
-        print(os.path.join(args.dataset_name, args.model_name, args.eval_task))
-        print("jailbreak attack success rate:", str(ASR))
+        logger.info(f"save_path: {save_path}")
+        logger.info(f"eval_path: {eval_path}")
+        logger.info("start evaluating...")
+        if os.path.exists(eval_path):
+            logger.info(f"{eval_path} already exists, skip evaluating...")
+        else:
+            ASR = attacker.evaluation(input_path = save_path, eval_output_path = eval_path)
+            logger.info("-----------Evaluation Result-----------")
+            logger.info(os.path.join(args.dataset_name, args.model_name, args.eval_task))
+            logger.info(f"jailbreak attack success rate: {ASR}")
 
 elif args.eval_task == "multiple_choice":
+    logger.info(f"current task: {args.eval_task}")
     save_path_template = os.path.join(args.output_dir, "llm_response_mcq/{dataset_name}/{prompt_mode}/{dataset_name}_MCQ-{model_name}.json")
     eval_path_template_1 = os.path.join(args.output_dir, "eval_results_mcq/{dataset_name}/{prompt_mode}/{dataset_name}_MCQ-{model_name}_eval.json")
     eval_path_template_2 = os.path.join(args.output_dir, "eval_results_mcq/{dataset_name}/{prompt_mode}/{dataset_name}_MCQ-{model_name}_eval-2.json")
@@ -187,7 +209,11 @@ elif args.eval_task == "multiple_choice":
         save_path = save_path_template.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
         if not os.path.exists(os.path.dirname(save_path)):
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        MultipleChioceQuestion(target_model=target_model, test_file=supported_dataset_list[args.dataset_name][2], save_path=save_path, prompt_mode=args.prompt_mode)
+        logger.info("start attacking...")
+        if os.path.exists(save_path):
+            logger.info(f"{save_path} already exists, skip attacking and start evaluating...")
+        else:
+            MultipleChioceQuestion(target_model=target_model, test_file=supported_dataset_list[args.dataset_name][2], save_path=save_path, prompt_mode=args.prompt_mode)
     elif args.evaluation:
         save_path = save_path_template.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
         eval_path_1 = eval_path_template_1.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
@@ -196,12 +222,17 @@ elif args.eval_task == "multiple_choice":
             os.makedirs(os.path.dirname(eval_path_1), exist_ok=True)
         if not os.path.exists(os.path.dirname(eval_path_2)):
             os.makedirs(os.path.dirname(eval_path_2), exist_ok=True)
-        false_rate_non_format_1, false_rate_format_1, false_format_nums_1, error_format_nums_1 = MultipleChioceQuestion_evaluation(eval_model=eval_model, results_file=save_path, save_path=eval_path_1)
-        false_rate_non_format, false_rate_format, false_format_nums, error_format_nums = MultipleChioceQuestion_evaluation(eval_model=eval_model, results_file=save_path, save_path=eval_path_2, format_mode=False)
-        print("multiple-choice question test -- false rate:", false_rate_non_format)
+        logger.info("start evaluating...")
+        if os.path.exists(eval_path_1) and os.path.exists(eval_path_2):
+            logger.info(f"{eval_path_1} and {eval_path_2} already exist, skip evaluating...")
+        else:
+            false_rate_non_format_1, false_rate_format_1, false_format_nums_1, error_format_nums_1 = MultipleChioceQuestion_evaluation(eval_model=eval_model, results_file=save_path, save_path=eval_path_1)
+            false_rate_non_format, false_rate_format, false_format_nums, error_format_nums = MultipleChioceQuestion_evaluation(eval_model=eval_model, results_file=save_path, save_path=eval_path_2, format_mode=False)
+            logger.info(f"multiple-choice question test -- false rate: {false_rate_non_format}")
 
 
 elif args.eval_task == "safety_judgement":
+    logger.info(f"current task: {args.eval_task}")
     save_path_template = "./outputs_results_benchmark/llm_response_selfeval/{dataset_name}/{prompt_mode}/{dataset_name}_SelfEval-{model_name}.json"
     eval_path_template_1 = "./outputs_results_benchmark/eval_results_selfeval/{dataset_name}/{prompt_mode}/{dataset_name}_SelfEval-{model_name}_eval.json"
     eval_path_template_2 = "./outputs_results_benchmark/eval_results_selfeval/{dataset_name}/{prompt_mode}/{dataset_name}_SelfEval-{model_name}_eval-2.json"
@@ -209,7 +240,11 @@ elif args.eval_task == "safety_judgement":
         save_path = save_path_template.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
         if not os.path.exists(os.path.dirname(save_path)):
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        selfevalcheck(target_model=target_model, test_file=supported_dataset_list[args.dataset_name][3], save_path=save_path, prompt_mode=args.prompt_mode)
+        logger.info("start attacking...")
+        if os.path.exists(save_path):
+            logger.info(f"{save_path} already exists, skip attacking and start evaluating...")
+        else:
+            selfevalcheck(target_model=target_model, test_file=supported_dataset_list[args.dataset_name][3], save_path=save_path, prompt_mode=args.prompt_mode)
     elif args.evaluation:
         save_path = save_path_template.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
         eval_path_1 = eval_path_template_1.format(dataset_name=args.dataset_name, prompt_mode=args.prompt_mode, model_name=args.model_name)
@@ -218,6 +253,10 @@ elif args.eval_task == "safety_judgement":
             os.makedirs(os.path.dirname(eval_path_1), exist_ok=True)
         if not os.path.exists(os.path.dirname(eval_path_2)):
             os.makedirs(os.path.dirname(eval_path_2), exist_ok=True)
-        false_rate_non_format_1, false_rate_format_1, false_format_nums_1, error_format_nums_1 = selfevalcheck_evaluation(eval_model=eval_model, results_file=save_path, save_path=eval_path_1, Ts=supported_dataset_list[args.dataset_name][4])
-        false_rate_non_format, false_rate_format, false_format_nums, error_format_nums = selfevalcheck_evaluation(eval_model=eval_model, results_file=save_path, save_path=eval_path_2, Ts=supported_dataset_list[args.dataset_name][4], format_mode=False)
-        print("safety judgment test -- false rate:", false_rate_non_format)
+        logger.info("start evaluating...")
+        if os.path.exists(eval_path_1) and os.path.exists(eval_path_2):
+            logger.info(f"{eval_path_1} and {eval_path_2} already exist, skip evaluating...")
+        else:
+            false_rate_non_format_1, false_rate_format_1, false_format_nums_1, error_format_nums_1 = selfevalcheck_evaluation(eval_model=eval_model, results_file=save_path, save_path=eval_path_1, Ts=supported_dataset_list[args.dataset_name][4])
+            false_rate_non_format, false_rate_format, false_format_nums, error_format_nums = selfevalcheck_evaluation(eval_model=eval_model, results_file=save_path, save_path=eval_path_2, Ts=supported_dataset_list[args.dataset_name][4], format_mode=False)
+            logger.info(f"safety judgment test -- false rate: {false_rate_non_format}")

@@ -3,6 +3,9 @@ import json
 logging.basicConfig(level=logging.INFO)
 from easyjailbreak.datasets import JailbreakDataset, Instance
 from easyjailbreak.mutation.rule import *
+from easyjailbreak.loggers.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def write_to_json(data, filename="./AdvBench_MCQ-eval.json"):
@@ -23,7 +26,7 @@ def selfevalcheck(target_model, test_file, save_path, prompt_mode):
     attack_results = JailbreakDataset([])
     attack_results_list = []
     results = read_json_tolist(test_file)
-    print(len(results))
+    logger.info(f"# of samples in the test file: {len(results)}")
     i=0
     for new_instance in results:
         if i < 0:
@@ -143,12 +146,13 @@ Next, try your best to perform safety judgement for the answer of AI assistant d
             raise NotImplementedError("The prompt mode is not supported yet, please check the prompt mode and try again.")
         new_instance['selfeval_response'] = []
         attack_results.add(new_instance)
-    print(len(attack_results))
+    logger.info(f"Total instances prepared for self-evaluation: {len(attack_results)}")
 
     for instance in attack_results:
         answer = target_model.generate(instance.jailbreak_prompt.format(prompt=instance.query, answer=instance.target_responses[0]))
-        print("-------------------------------")
-        print(answer)
+        logger.info("--------------------------------")
+        logger.info(f"answer from the evaluation model: {answer}")
+        logger.info("-------------------------------")
         instance.selfeval_response.append(answer)
         write_to_json(data=instance.to_dict(), filename=save_path)
         attack_results_list.append(instance.to_dict())
@@ -182,7 +186,7 @@ def selfevalcheck_evaluation(eval_model, results_file, save_path, Ts, format_mod
 
     attack_results = JailbreakDataset([])
     results = read_json_tolist(results_file)
-    print(len(results))
+    logger.info(f"total samples nums: {len(results)}")
     i=0
     for new_instance in results:
         if i < 0:
@@ -190,7 +194,7 @@ def selfevalcheck_evaluation(eval_model, results_file, save_path, Ts, format_mod
             continue
         new_instance['safety_eval'] = []
         attack_results.add(new_instance)
-    print(len(attack_results))
+    logger.info(f"Total instances prepared for self-evaluation: {len(attack_results)}")
 
     total_samples_nums = len(attack_results)
     false_non_format_nums = 0

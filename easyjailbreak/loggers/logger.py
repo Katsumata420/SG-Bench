@@ -3,7 +3,7 @@ Attack Logger Wrapper
 ========================
 """
 
-
+import sys
 import logging
 
 
@@ -61,3 +61,19 @@ class KeywordFilter(logging.Filter):
 # 创建一个日志器
 
 # 创建并添加过滤器
+
+LOGGING_LEVEL = logging.DEBUG
+
+
+def get_logger(name: str) -> logging.Logger:
+    """Get logger with the specified name."""
+    logger = logging.getLogger(name)
+    logger.setLevel(LOGGING_LEVEL)
+    handler_format = logging.Formatter(
+        ("[%(asctime)s] [%(name)s] [%(filename)s:%(funcName)s:%(lineno)d] [%(levelname)s] %(message)s")
+    )
+    stream_handler = logging.StreamHandler(stream=sys.stdout)
+    stream_handler.setLevel(LOGGING_LEVEL)
+    stream_handler.setFormatter(handler_format)
+    logger.addHandler(stream_handler)
+    return logger

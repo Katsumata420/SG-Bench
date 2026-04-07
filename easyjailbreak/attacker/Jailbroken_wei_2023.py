@@ -15,6 +15,9 @@ from easyjailbreak.metrics.Evaluator import EvaluatorJudge
 from easyjailbreak.attacker import AttackerBase
 from easyjailbreak.datasets import JailbreakDataset, Instance
 from easyjailbreak.mutation.rule import *
+from easyjailbreak.loggers.logger import get_logger
+
+logger = get_logger(__name__)
 
 __all__ = ['Jailbroken']
 
@@ -103,52 +106,52 @@ User: {query}
 
         for mutation in self.mutations:
             transformed_jailbreak_datasets = mutation(instance_ds)
-            print(len(transformed_jailbreak_datasets))
+            logger.info(f"Number of transformed instances: {len(transformed_jailbreak_datasets)}")
             for item in transformed_jailbreak_datasets:
                 source_instance_list.append(item)
 
-        print(len(source_instance_list))
-        print("****************")
+        logger.info(f"Number of source instances: {len(source_instance_list)}")
+        logger.info("****************")
         i=0
         for instance in source_instance_list:
             if mode == "":
                 answer = self.target_model.generate(instance.jailbreak_prompt.format(query = instance.query, reference_responses=instance.reference_responses[0]))
             elif mode == "ToP":
-                print("ToP prompt:")
-                print(self.task_oriented_prompt)
+                logger.info("ToP prompt:")
+                logger.info(self.task_oriented_prompt)
                 answer = self.target_model.generate(self.task_oriented_prompt.format(query=instance.jailbreak_prompt.format(query = instance.query)))
             elif mode == "ToP-FS-bad":
-                print("ToP-FS-bad prompt:")
-                print(self.task_oriented_prompt)
-                print(self.fewshot_prompt_bad)
+                logger.info("ToP-FS-bad prompt:")
+                logger.info(self.task_oriented_prompt)
+                logger.info(self.fewshot_prompt_bad)
                 answer = self.target_model.generate(self.task_oriented_prompt + self.fewshot_prompt_bad.format(query=instance.jailbreak_prompt.format(query = instance.query)))
             elif mode == "ToP-FS-good":
-                print("ToP-FS-good prompt:")
-                print(self.task_oriented_prompt)
-                print(self.fewshot_prompt_good)
+                logger.info("ToP-FS-good prompt:")
+                logger.info(self.task_oriented_prompt)
+                logger.info(self.fewshot_prompt_good)
                 answer = self.target_model.generate(self.task_oriented_prompt + self.fewshot_prompt_good.format(query=instance.jailbreak_prompt.format(query = instance.query)))
             elif mode == "RoP":
-                print("RoP prompt:")
-                print(self.role_oriented_prompt)
+                logger.info("RoP prompt:")
+                logger.info(self.role_oriented_prompt)
                 answer = self.target_model.generate(self.role_oriented_prompt.format(query=instance.jailbreak_prompt.format(query = instance.query)))
             elif mode == "RoP_fewshot_harmful":
-                print("RoP_fewshot_harmful prompt:")
-                print(self.role_oriented_prompt)
-                print(self.fewshot_prompt_bad)
+                logger.info("RoP_fewshot_harmful prompt:")
+                logger.info(self.role_oriented_prompt)
+                logger.info(self.fewshot_prompt_bad)
                 answer = self.target_model.generate(self.role_oriented_prompt + self.fewshot_prompt_bad.format(query=instance.jailbreak_prompt.format(query = instance.query)))
             elif mode == "RoP_fewshot_general":
-                print("RoP_fewshot_general prompt:")
-                print(self.role_oriented_prompt)
-                print(self.fewshot_prompt_good)
+                logger.info("RoP_fewshot_general prompt:")
+                logger.info(self.role_oriented_prompt)
+                logger.info(self.fewshot_prompt_good)
                 answer = self.target_model.generate(self.role_oriented_prompt + self.fewshot_prompt_good.format(query=instance.jailbreak_prompt.format(query = instance.query)))
             else:
                 raise NotImplementedError("The mode is not supported yet, please check the mode and try again.")
 
             instance.target_responses = []
             instance.target_responses.append(answer)
-            print(instance)
+            logger.info(instance)
             self.write_to_json(data=instance.to_dict(), filename=output_path)
-            print("****************")
+            logger.info("****************")
             updated_instance_list.append(instance)
         return JailbreakDataset(updated_instance_list)
 
@@ -173,7 +176,7 @@ User: {query}
         logging.info("Jailbreak started!")
         self.attack_results = JailbreakDataset([])
         self.attack_results_list = []
-        print(len(self.jailbreak_datasets))
+        logger.info(f"Total instances to attack: {len(self.jailbreak_datasets)}")
 
         i=0
         try:
@@ -181,9 +184,8 @@ User: {query}
                 if i < 0:
                     i+=1
                     continue
-                print("---------------------------")
-                print(f"Attacking instance {i+1}/{len(self.jailbreak_datasets)}")
-                print(f"Instance: {Instance}")
+                logger.info(f"Attacking instance {i+1}/{len(self.jailbreak_datasets)}")
+                logger.info(f"Instance: {Instance}")
                 results = self.single_attack(output_path, mode, Instance)
                 for new_instance in results:
                     self.attack_results.add(new_instance)
@@ -201,14 +203,14 @@ User: {query}
         logging.info("load LLM outputs and start to evaluate!")
         self.attack_results = JailbreakDataset([])
         results = self.read_json_tolist(filename=input_path)
-        print(len(results))
+        logger.info(f"Total results loaded: {len(results)}")
         i=0
         for new_instance in results:
             if i < 0:
                 i+=1
                 continue
             self.attack_results.add(new_instance)
-        print(len(self.attack_results))
+        logger.info(f"Total attack results: {len(self.attack_results)}")
         self.evaluator.eval_result_path = eval_output_path
         self.evaluator(self.attack_results)
         self.update(self.attack_results)

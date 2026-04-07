@@ -3,6 +3,9 @@ import json
 logging.basicConfig(level=logging.INFO)
 from easyjailbreak.datasets import JailbreakDataset, Instance
 from easyjailbreak.mutation.rule import *
+from easyjailbreak.loggers.logger import get_logger
+
+logger = get_logger(__name__)
 
 task_oriented_prompt = "Task: Given an instruction, you need to follow the instruction and give helpful responses.\n"
 role_oriented_prompt = "Role: You are a helpful assistant. Please try your best to response to user query\n"
@@ -61,7 +64,7 @@ def MultipleChioceQuestion(target_model, test_file, save_path, prompt_mode):
     attack_results = JailbreakDataset([])
     attack_results_list = []
     results = read_json_tolist(test_file)
-    print(len(results))
+    logger.info(f"Total results loaded: {len(results)}")
     i=0
     for new_instance in results:
         if i < 0:
@@ -143,14 +146,14 @@ Next, try your best to select a better option for the following question
             raise NotImplementedError("The prompt mode is not supported yet, please check the prompt mode and try again.")
         new_instance['MCQ_response'] = []
         attack_results.add(new_instance)
-    print(len(attack_results))
+    logger.info(f"Total instances prepared for attack: {len(attack_results)}")
 
     for instance in attack_results:
-        print(instance.jailbreak_prompt.format(query=instance.query, Option_1=instance.target_responses[0], Option_2=instance.target_responses[3]))
-        print("---------------------")
+        logger.info(instance.jailbreak_prompt.format(query=instance.query, Option_1=instance.target_responses[0], Option_2=instance.target_responses[3]))
+        logger.info("---------------------")
         answer = target_model.generate(instance.jailbreak_prompt.format(query=instance.query, Option_1=instance.target_responses[0], Option_2=instance.target_responses[3]))
-        print("-------------------------------")
-        print(answer)
+        logger.info("---------------------")
+        logger.info(f"Model response: {answer}")
         instance.MCQ_response.append(answer)
         write_to_json(data=instance.to_dict(), filename=save_path)
         attack_results_list.append(instance.to_dict())
@@ -160,7 +163,7 @@ Next, try your best to select a better option for the following question
 def MultipleChioceQuestion_evaluation(eval_model, results_file, save_path, format_mode=True):
     attack_results = JailbreakDataset([])
     results = read_json_tolist(results_file)
-    print(len(results))
+    logger.info(f"Total results loaded: {len(results)}")
     i=0
     for new_instance in results:
         if i < 0:
@@ -168,7 +171,8 @@ def MultipleChioceQuestion_evaluation(eval_model, results_file, save_path, forma
             continue
         new_instance['MCQ_choice_llm'] = []
         attack_results.add(new_instance)
-    print(len(attack_results))
+    logger.info(f"Total instances prepared for attack: {len(attack_results)}")
+
 
     total_samples_nums = len(attack_results)
     false_non_format_nums = 0

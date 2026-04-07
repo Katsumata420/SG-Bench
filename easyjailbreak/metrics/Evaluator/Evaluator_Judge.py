@@ -123,7 +123,7 @@ Provide your safety assessment for Assistant's answer in the above conversation:
                 device = torch.device("cuda")
                 input_ids = input_ids.to(device)
                 output = self.eval_model.model.generate(input_ids=input_ids["input_ids"], max_new_tokens=100, pad_token_id=0)
-                prompt_len = input_ids.shape[-1]
+                prompt_len = input_ids["input_ids"].shape[-1]
                 return self.eval_model.tokenizer.decode(output[0][prompt_len:], skip_special_tokens=True)
 
             response = moderate([
